@@ -1,4 +1,7 @@
 spring:
+  cache:
+    caffeine:
+      spec: maximumSize=100,expireAfterWrite=10s
   datasource:
     url: jdbc:mysql://localhost:3306/nbcam
     username: root
