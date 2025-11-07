@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -31,13 +32,6 @@ public class PostController {
     }
 
 
-
-    //특정 사용자가 작성한 게시글에 달린 댓글의 갯수를 구하는 기능을 만들어주세요.
-    @GetMapping("/user/{username}/detail")
-    public ResponseEntity<List<PostSummaryDto>> getPostListDetailByUsername(@PathVariable String username) {
-        return ResponseEntity.ok(postService.getPostSummaryListByUsername(username));
-    }
-
     @GetMapping("/{postId}")
     public ResponseEntity<PostDto> getPostById(@PathVariable long postId) {
         return ResponseEntity.ok(postService.getPost(postId));
@@ -46,6 +40,12 @@ public class PostController {
     @PutMapping("/{postId}")
     public ResponseEntity<PostDto> updatePost(@PathVariable long postId, @RequestBody UpdatePostRequest request) {
         return ResponseEntity.ok(postService.updatePost(postId, request));
+    }
+
+    // 인기 게시글 조회
+    @GetMapping("/popular")
+    public ResponseEntity<List<PostDto>> getPopularPosts(@RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(postService.getTopPosts(limit));
     }
 
 }

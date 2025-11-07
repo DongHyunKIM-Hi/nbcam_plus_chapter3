@@ -1,6 +1,8 @@
 package org.example.plus.domain.post.service;
 
 import jakarta.transaction.Transactional;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -35,21 +37,15 @@ public class PostService {
         return PostDto.from(post);
     }
 
-
-    public List<PostSummaryDto> getPostSummaryListByUsername(String username) {
-
-        List<PostSummaryDto> result = postRepository.findPostSummary(username);
-        return result;
-    }
-
     public PostDto getPost(long postId) {
 
         // 1단계 : 캐시가 있나요?
 
-        Object cached = postCacheService.getPostCache(postId);
+        PostDto cached = postCacheService.getPostCache(postId);
         if (cached != null) {
             log.info(" Redis Cache HIT ! ");
-            return (PostDto) cached;
+            postCacheService.increaseViewCount(postId);
+            return cached;
         }
 
         // 2단계 : 캐시가 없을 경우 직접 조회
@@ -60,8 +56,9 @@ public class PostService {
 
         PostDto postDto = PostDto.from(post);
 
-        // 3단계 : DB에서 가져온 값을 캐시에 저장 -> 다음번에 활용하기 위해서
+        // 3단계 : DB에서 가져온 값을 캐시에 저장 -> 다음번에 활용하기 위해서 + 조회수 반영
         postCacheService.savePostCache(postId, postDto);
+        postCacheService.increaseViewCount(postId);
 
         return postDto;
     }
@@ -72,17 +69,36 @@ public class PostService {
             .orElseThrow(() -> new IllegalArgumentException("Post가 없습니다."));
 
         post.update(request);
-
         postRepository.save(post);
 
-        // (2) 캐시 삭제 (무효화)
+        // 캐시 삭제 (무효화)
         postCacheService.deletePostCache(postId);
 
         return PostDto.from(post);
 
     }
 
-    
+    public List<PostDto> getTopPosts(int limit) {
+
+        List<Long> topPostIdList = postCacheService.getTopPosts(limit);
+        List<PostDto> result = new ArrayList<>();
+
+
+        if (topPostIdList.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        for (Long postId : topPostIdList) {
+            PostDto postDto = postCacheService.getPostCache(postId);
+
+            if (postDto == null) {
+                postDto = PostDto.from(postRepository.findById(postId)
+                    .orElseThrow(()-> new IllegalArgumentException("Post가 없습니다.")));
+            }
+            result.add(postDto);
+        }
+        return result;
+    }
 
 
 }
